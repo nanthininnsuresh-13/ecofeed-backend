@@ -6,6 +6,7 @@ const User = require('../models/User');
 const FoodListing = require('../models/FoodListing');
 const PickupRequest = require('../models/PickupRequest');
 const Review = require('../models/Review');
+const { createNotification } = require('../utils/notificationHelper');
 
 // Helper to generate JWT
 const generateToken = (id) => {
@@ -119,13 +120,30 @@ router.post('/auth/login', async (req, res) => {
 // 2. DONATION ROUTES
 router.post('/donations/add', async (req, res) => {
     try {
-        const { latitude, longitude, foodName, address, ...rest } = req.body;
+        const { latitude, longitude, foodName, address, donorId, ...rest } = req.body;
         const donation = await FoodListing.create({
             ...rest,
+            donorId,
             title: foodName,
             address: address || 'Trichy, Tamil Nadu, India',
             location: { type: "Point", coordinates: [parseFloat(longitude || 78.6862), parseFloat(latitude || 10.7905)] }
         });
+
+        // Broadcast Notification to all NGOs/Biogas
+        const lotId = `LOT-#${donation._id.toString().slice(-4).toUpperCase()}`;
+        const targetRole = (donation.isEdible === false || donation.category === 'EXPIRED') ? 'BIOGAS' : 'NGO';
+
+        await createNotification({
+            recipientRole: targetRole,
+            title: targetRole === 'NGO' ? '⚡ Urgent Food Alert' : '♻️ New Organic Waste Available',
+            message: targetRole === 'NGO'
+                ? `Fresh surplus (${donation.quantity}) available nearby at ${donation.address}.`
+                : `${donation.quantity} of organic waste available for collection at ${donation.address}.`,
+            type: targetRole === 'NGO' ? 'URGENT' : 'INFO',
+            relatedId: donation._id,
+            lotId: lotId
+        });
+
         res.status(201).json(donation);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -298,7 +316,58 @@ router.put('/donations/accept/:id', async (req, res) => {
             { new: true }
         );
         if (!donation) return res.status(404).json({ message: 'Donation not found' });
+
+        // Trigger Notification for Donor
+        const lotId = `LOT-#${donation._id.toString().slice(-4).toUpperCase()}`;
+        await createNotification({
+            recipientId: donation.donorId,
+            recipientRole: 'DONOR',
+            title: '✅ Donation Accepted',
+            message: `Your donation '${donation.title}' (${lotId}) was accepted. Pickup estimated in 30 minutes!`,
+            type: 'SUCCESS',
+            relatedId: donation._id,
+            lotId: lotId
+        });
+
+        // Notification for Recipient
+        await createNotification({
+            recipientId: acceptedBy,
+            recipientRole: 'NGO', // Fixed for this endpoint
+            title: '✅ Claim Confirmed',
+            message: `You have claimed '${donation.title}' (${lotId}). Tap to view pickup route.`,
+            type: 'SUCCESS',
+            relatedId: donation._id,
+            lotId: lotId
+        });
+
         res.json({ message: 'Donation Accepted successfully', donation });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+router.put('/donations/deliver/:id', async (req, res) => {
+    try {
+        const donation = await FoodListing.findByIdAndUpdate(
+            req.params.id,
+            { status: 'DELIVERED', deliveredAt: new Date() },
+            { new: true }
+        );
+        if (!donation) return res.status(404).json({ message: 'Donation not found' });
+
+        const lotId = `LOT-#${donation._id.toString().slice(-4).toUpperCase()}`;
+
+        // Notify Donor
+        await createNotification(
+            donation.donorId,
+            '🎉 Delivery Complete',
+            `Your donation '${donation.title}' (${lotId}) was delivered successfully!`,
+            'SUCCESS',
+            donation._id,
+            lotId
+        );
+
+        res.json({ message: 'Marked as Delivered', donation });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -313,6 +382,18 @@ router.put('/donations/biogas/accept/:id', async (req, res) => {
             { new: true }
         );
         if (!donation) return res.status(404).json({ message: 'Donation not found' });
+
+        // Trigger Notification for Donor
+        const lotId = `LOT-#${donation._id.toString().slice(-4).toUpperCase()}`;
+        await createNotification(
+            donation.donorId,
+            '♻️ Waste Redirected',
+            `Your item '${donation.title}' (${lotId}) successfully claimed by Biogas Partner.`,
+            'INFO',
+            donation._id,
+            lotId
+        );
+
         res.json({ message: 'Biogas pickup accepted successfully', donation });
     } catch (error) {
         res.status(500).json({ message: error.message });

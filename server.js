@@ -4,7 +4,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
-app.use(express.json());
+
+// Increased payload limits for Base64 image uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Optimized CORS for Cloud Deployment
 // Allows all origins for mobile app accessibility

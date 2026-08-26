@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    recipientId: { type: String, default: null },
+    recipientRole: { type: String, enum: ['DONOR', 'NGO', 'BIOGAS', 'ALL'], required: true },
     title: { type: String, required: true },
     message: { type: String, required: true },
     type: { type: String, enum: ['INFO', 'SUCCESS', 'WARNING', 'URGENT'], default: 'INFO' },
