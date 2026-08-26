@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- For Emulator -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- For localhost if using adb reverse -->
+        <domain includeSubdomains="true">localhost</domain>
+        <!-- Allow all local network traffic (common for local development) -->
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">192.168.29.99</domain>
+    </domain-config>
+
+    <!-- Fallback to permit cleartext for specific subnets if needed,
+         or just use android:usesCleartextTraffic="true" for simpler local dev -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
