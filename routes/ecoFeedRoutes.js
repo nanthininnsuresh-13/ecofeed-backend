@@ -318,7 +318,13 @@ router.get('/donations/history/:donorId', async (req, res) => {
     try {
         const donations = await FoodListing.find({ donorId: req.params.donorId })
             .sort({ createdAt: -1 });
-        res.json(donations);
+
+        const result = donations.map(d => ({
+            ...d._doc,
+            id: d._id,
+            donorId: d.donorId
+        }));
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -469,32 +475,6 @@ router.put('/donations/biogas/accept/:id', async (req, res) => {
         });
 
         res.json({ message: 'Biogas pickup accepted successfully', donation });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-router.post('/reviews/add', async (req, res) => {
-    try {
-        const { donationId, donorId, ngoId, rating, feedbackText } = req.body;
-        if (!donationId || !donorId || !ngoId || !rating) {
-            return res.status(400).json({ message: 'donationId, donorId, ngoId and rating are required' });
-        }
-
-        const review = await Review.create({ donationId, donorId, ngoId, rating, feedbackText: feedbackText || '' });
-
-        const stats = await Review.aggregate([
-            { $match: { donorId: mongoose.Types.ObjectId(donorId) } },
-            { $group: { _id: '$donorId', averageRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }
-        ]);
-
-        const userStats = stats[0] || { averageRating: 0, reviewCount: 0 };
-        await User.findByIdAndUpdate(donorId, {
-            averageRating: Number(userStats.averageRating || 0),
-            reviewCount: Number(userStats.reviewCount || 0)
-        });
-
-        res.status(201).json({ message: 'Review saved successfully', review, averageRating: userStats.averageRating || 0, reviewCount: userStats.reviewCount || 0 });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

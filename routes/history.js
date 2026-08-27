@@ -27,6 +27,7 @@ router.get('/:userId', async (req, res) => {
             quantity: item.quantity,
             status: item.status,
             createdAt: item.createdAt,
+            donorId: item.donorId ? item.donorId._id : null,
             recipientName: item.acceptedBy ? (item.acceptedBy.organizationName || `${item.acceptedBy.firstName} ${item.acceptedBy.lastName}`) : null,
             donorName: item.donorId ? (item.donorId.organizationName || `${item.donorId.firstName} ${item.donorId.lastName}`) : 'Unknown Donor'
         }));

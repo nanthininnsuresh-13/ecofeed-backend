@@ -45,6 +45,7 @@ app.use('/api', require('./routes/ecoFeedRoutes'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/notifications', require('./routes/notification'));
+app.use('/api/feedback', require('./routes/feedback'));
 
 const PORT = process.env.PORT || 5000;
 // Bind to 0.0.0.0 to accept connections from other devices on the same Wi-Fi
