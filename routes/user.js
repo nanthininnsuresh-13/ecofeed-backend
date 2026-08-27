@@ -17,12 +17,21 @@ router.get('/profile/:id', async (req, res) => {
 // Update Profile (Photo & Location)
 router.put('/profile', async (req, res) => {
     try {
-        const { userId, fullName, phoneNumber, address, organizationName, establishmentName, profileImageUrl } = req.body;
+        const { userId, fullName, phoneNumber, location, establishmentName, organizationName, profilePicture, profileImageUrl } = req.body;
 
         const updateFields = {};
-        if (profileImageUrl !== undefined) updateFields.profileImageUrl = profileImageUrl;
-        if (phoneNumber !== undefined) updateFields.phoneNumber = phoneNumber;
-        if (address !== undefined) updateFields.address = address;
+        if (profileImageUrl !== undefined || profilePicture !== undefined) {
+            updateFields.profileImageUrl = profileImageUrl || profilePicture;
+        }
+
+        if (phoneNumber !== undefined) {
+            // Validate digits only and cast to Number
+            const cleanPhone = String(phoneNumber).replace(/\D/g, '');
+            updateFields.phoneNumber = Number(cleanPhone);
+        }
+
+        if (location !== undefined) updateFields.location = String(location);
+        if (fullName !== undefined) updateFields.fullName = fullName;
 
         const orgName = organizationName || establishmentName;
         if (orgName !== undefined) updateFields.organizationName = orgName;

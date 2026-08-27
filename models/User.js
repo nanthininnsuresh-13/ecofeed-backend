@@ -7,20 +7,22 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ['DONOR', 'NGO', 'BIOGAS'], required: true },
-    phoneNumber: { type: String },
+    fullName: { type: String },
+    phoneNumber: { type: Number },
     organizationName: { type: String },
     profileImageUrl: { type: String, default: '' },
     address: { type: String, default: 'Trichy, Tamil Nadu, India' },
+    location: { type: String, default: 'Trichy, Tamil Nadu, India' },
     averageRating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
-    location: {
+    geoPoint: {
         type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], default: [0, 0] } // [lng, lat]
+        coordinates: { type: [Number], default: [78.6862, 10.7905] } // [lng, lat]
     },
     createdAt: { type: Date, default: Date.now }
 });
 
-userSchema.index({ location: '2dsphere' });
+userSchema.index({ geoPoint: '2dsphere' });
 
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
