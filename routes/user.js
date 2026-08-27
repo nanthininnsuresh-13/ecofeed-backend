@@ -30,7 +30,14 @@ router.put('/profile', async (req, res) => {
             updateFields.phoneNumber = Number(cleanPhone) || 0;
         }
 
-        if (location !== undefined) updateFields.location = String(location);
+        if (address !== undefined) {
+            updateFields.address = String(address);
+            updateFields.location = String(address); // Sync location with address
+        } else if (location !== undefined) {
+            updateFields.location = String(location);
+            updateFields.address = String(location); // Sync address with location
+        }
+
         if (fullName !== undefined) updateFields.fullName = String(fullName);
 
         if (organizationName !== undefined) updateFields.organizationName = String(organizationName);
