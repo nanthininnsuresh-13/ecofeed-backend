@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     role: { type: String, enum: ['DONOR', 'NGO', 'BIOGAS'], required: true },
     fullName: { type: String },
-    phoneNumber: { type: Number },
+    phoneNumber: { type: Number }, // Explicitly Number for persistence
     organizationName: { type: String },
     profileImageUrl: { type: String, default: '' },
     address: { type: String, default: 'Trichy, Tamil Nadu, India' },

@@ -5,7 +5,7 @@ const cors = require('cors');
 
 const app = express();
 
-// Increased payload limits for Base64 image uploads
+// INCREASED PAYLOAD LIMITS for Base64 Profile Photos (50MB)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

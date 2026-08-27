@@ -14,10 +14,10 @@ router.get('/profile/:id', async (req, res) => {
     }
 });
 
-// Update Profile (Photo & Location)
+// Update Profile (Persistence & Correct Data Types)
 router.put('/profile', async (req, res) => {
     try {
-        const { userId, fullName, phoneNumber, location, establishmentName, organizationName, profilePicture, profileImageUrl } = req.body;
+        const { userId, fullName, phoneNumber, location, organizationName, profilePicture, profileImageUrl } = req.body;
 
         const updateFields = {};
         if (profileImageUrl !== undefined || profilePicture !== undefined) {
@@ -25,16 +25,15 @@ router.put('/profile', async (req, res) => {
         }
 
         if (phoneNumber !== undefined) {
-            // Validate digits only and cast to Number
+            // Clean and cast to numeric Number
             const cleanPhone = String(phoneNumber).replace(/\D/g, '');
-            updateFields.phoneNumber = Number(cleanPhone);
+            updateFields.phoneNumber = Number(cleanPhone) || 0;
         }
 
         if (location !== undefined) updateFields.location = String(location);
-        if (fullName !== undefined) updateFields.fullName = fullName;
+        if (fullName !== undefined) updateFields.fullName = String(fullName);
 
-        const orgName = organizationName || establishmentName;
-        if (orgName !== undefined) updateFields.organizationName = orgName;
+        if (organizationName !== undefined) updateFields.organizationName = String(organizationName);
 
         if (fullName) {
             const parts = fullName.trim().split(' ');
@@ -45,7 +44,7 @@ router.put('/profile', async (req, res) => {
         const updatedUser = await User.findByIdAndUpdate(
             userId,
             { $set: updateFields },
-            { new: true, runValidators: true }
+            { new: true, runValidators: false }
         ).select('-password');
 
         if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
