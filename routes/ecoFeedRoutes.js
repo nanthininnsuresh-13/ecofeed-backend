@@ -167,30 +167,33 @@ router.get('/donations/ngo', async (req, res) => {
         const now = new Date();
         const donations = await FoodListing.find({
             isEdible: true,
-            status: 'AVAILABLE',
-            $and: [
-                { expiryTime: { $gte: now } },
-                { expiryDate: { $gte: now } }
-            ]
+            status: 'AVAILABLE'
         })
             .populate('donorId', 'firstName lastName organizationName averageRating reviewCount')
             .sort({ createdAt: -1 });
 
-        const result = donations.map(d => {
-            const donor = d.donorId;
-            const donorIdValue = donor && donor._id ? String(donor._id) : (d.donorId ? String(d.donorId) : '');
-            return {
-                ...d._doc,
-                donorId: donorIdValue,
-                donorName: donor ? (donor.organizationName || `${donor.firstName || ''} ${donor.lastName || ''}`.trim() || 'Nearby Donor') : (d.donorName || d.establishmentName || 'Nearby Donor'),
-                averageRating: donor ? (donor.averageRating || 0) : 0,
-                reviewCount: donor ? (donor.reviewCount || 0) : 0,
-                expiryTime: d.expiryTime || d.expiryDate || null,
-                imageUrls: Array.isArray(d.imageUrls) ? d.imageUrls : [],
-                isAiRecommended: false,
-                aiReason: null
-            };
-        });
+        const result = donations
+            .filter((d) => {
+                const expiryValue = d.expiryDate || d.expiryTime;
+                if (!expiryValue) return true;
+                const expiryDate = new Date(expiryValue);
+                return !Number.isNaN(expiryDate.getTime()) && expiryDate >= now;
+            })
+            .map(d => {
+                const donor = d.donorId;
+                const donorIdValue = donor && donor._id ? String(donor._id) : (d.donorId ? String(d.donorId) : '');
+                return {
+                    ...d._doc,
+                    donorId: donorIdValue,
+                    donorName: donor ? (donor.organizationName || `${donor.firstName || ''} ${donor.lastName || ''}`.trim() || 'Nearby Donor') : (d.donorName || d.establishmentName || 'Nearby Donor'),
+                    averageRating: donor ? (donor.averageRating || 0) : 0,
+                    reviewCount: donor ? (donor.reviewCount || 0) : 0,
+                    expiryTime: d.expiryTime || d.expiryDate || null,
+                    imageUrls: Array.isArray(d.imageUrls) ? d.imageUrls : [],
+                    isAiRecommended: false,
+                    aiReason: null
+                };
+            });
         res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -228,30 +231,31 @@ router.get('/donations/biogas', async (req, res) => {
     try {
         const now = new Date();
         const donations = await FoodListing.find({
-            status: 'AVAILABLE',
-            $or: [
-                { isEdible: false },
-                { expiryTime: { $lt: now } },
-                { expiryDate: { $lt: now } },
-                { category: 'EXPIRED' }
-            ]
+            status: 'AVAILABLE'
         })
         .populate('donorId', 'firstName organizationName averageRating reviewCount')
         .sort({ createdAt: -1 });
 
-        const result = donations.map(d => {
-            const donor = d.donorId;
-            const donorIdValue = donor && donor._id ? String(donor._id) : (d.donorId ? String(d.donorId) : '');
-            return {
-                ...d._doc,
-                donorId: donorIdValue,
-                donorName: donor ? (donor.organizationName || donor.firstName || 'Nearby') : (d.donorName || d.establishmentName || 'Nearby'),
-                averageRating: donor ? (donor.averageRating || 0) : 0,
-                reviewCount: donor ? (donor.reviewCount || 0) : 0,
-                imageUrls: Array.isArray(d.imageUrls) ? d.imageUrls : [],
-                expiryFlag: d.expiryTime || d.expiryDate ? `Expired on ${new Date(d.expiryTime || d.expiryDate).toLocaleDateString()}` : 'No expiry date'
-            };
-        });
+        const result = donations
+            .filter((d) => {
+                const expiryValue = d.expiryDate || d.expiryTime;
+                const expiryDate = expiryValue ? new Date(expiryValue) : null;
+                const isExpired = expiryDate && !Number.isNaN(expiryDate.getTime()) && expiryDate < now;
+                return d.isEdible === false || isExpired || (d.category && ['EXPIRED', 'VEGETABLE_WASTE', 'KITCHEN_PEELS'].includes(d.category));
+            })
+            .map(d => {
+                const donor = d.donorId;
+                const donorIdValue = donor && donor._id ? String(donor._id) : (d.donorId ? String(d.donorId) : '');
+                return {
+                    ...d._doc,
+                    donorId: donorIdValue,
+                    donorName: donor ? (donor.organizationName || donor.firstName || 'Nearby') : (d.donorName || d.establishmentName || 'Nearby'),
+                    averageRating: donor ? (donor.averageRating || 0) : 0,
+                    reviewCount: donor ? (donor.reviewCount || 0) : 0,
+                    imageUrls: Array.isArray(d.imageUrls) ? d.imageUrls : [],
+                    expiryFlag: d.expiryTime || d.expiryDate ? `Expired on ${new Date(d.expiryTime || d.expiryDate).toLocaleDateString()}` : 'No expiry date'
+                };
+            });
         res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });

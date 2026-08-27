@@ -34,6 +34,27 @@ router.get('/nearby', async (req, res) => {
     }
 });
 
+router.get('/ngo', async (req, res) => {
+    try {
+        const now = new Date();
+        const donations = await FoodListing.find({
+            isEdible: true,
+            status: 'AVAILABLE'
+        }).sort({ createdAt: -1 });
+
+        const visibleDonations = donations.filter((donation) => {
+            const hasExpiry = donation.expiryDate || donation.expiryTime;
+            if (!hasExpiry) return true;
+            const parsedExpiry = new Date(donation.expiryDate || donation.expiryTime);
+            return !Number.isNaN(parsedExpiry.getTime()) && parsedExpiry >= now;
+        });
+
+        res.json(visibleDonations);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/ngo/recommended', async (req, res) => {
     try {
         const donations = await FoodListing.find({ isEdible: true, status: 'AVAILABLE' }).sort({ priorityLevel: -1, expiryTime: 1 });
@@ -56,15 +77,17 @@ router.get('/biogas', async (req, res) => {
     try {
         const now = new Date();
         const donations = await FoodListing.find({
-            status: 'AVAILABLE',
-            $or: [
-                { isEdible: false },
-                { expiryTime: { $lt: now } },
-                { expiryDate: { $lt: now } },
-                { category: { $in: ['VEGETABLE_WASTE', 'KITCHEN_PEELS', 'EXPIRED'] } }
-            ]
+            status: 'AVAILABLE'
         }).sort({ createdAt: -1 });
-        res.json(donations);
+
+        const visibleDonations = donations.filter((donation) => {
+            const hasExpiry = donation.expiryDate || donation.expiryTime;
+            const parsedExpiry = hasExpiry ? new Date(donation.expiryDate || donation.expiryTime) : null;
+            const isExpired = parsedExpiry && !Number.isNaN(parsedExpiry.getTime()) && parsedExpiry < now;
+            return donation.isEdible === false || isExpired || (donation.category && ['VEGETABLE_WASTE', 'KITCHEN_PEELS', 'EXPIRED'].includes(donation.category));
+        });
+
+        res.json(visibleDonations);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
