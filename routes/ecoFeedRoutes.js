@@ -167,16 +167,27 @@ router.get('/donations/ngo', async (req, res) => {
         const now = new Date();
         const donations = await FoodListing.find({
             isEdible: true,
-            status: 'AVAILABLE',
-            $and: [
-                { $or: [{ expiryTime: { $gt: now } }, { expiryTime: null }] },
-                { $or: [{ expiryDate: { $gt: now } }, { expiryDate: null }] }
-            ]
+            status: 'AVAILABLE'
         })
             .populate('donorId', 'firstName lastName organizationName averageRating reviewCount')
             .sort({ createdAt: -1 });
 
-        const result = donations.map(d => {
+        // Dynamic filtering based on actual date objects
+        const result = donations.filter(d => {
+            const expiryValue = d.expiryDate || d.expiryTime;
+            if (!expiryValue) return true;
+
+            // Handle different date formats (DD/MM/YYYY or ISO)
+            let expiryDate;
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(expiryValue)) {
+                const [dd, mm, yyyy] = expiryValue.split('/');
+                expiryDate = new Date(`${yyyy}-${mm}-${dd}T23:59:59`);
+            } else {
+                expiryDate = new Date(expiryValue);
+            }
+
+            return !Number.isNaN(expiryDate.getTime()) && expiryDate >= now;
+        }).map(d => {
             const donor = d.donorId;
             const donorIdValue = donor && donor._id ? String(donor._id) : (d.donorId ? String(d.donorId) : '');
             return {
@@ -191,6 +202,7 @@ router.get('/donations/ngo', async (req, res) => {
                 aiReason: null
             };
         });
+
         res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -228,18 +240,27 @@ router.get('/donations/biogas', async (req, res) => {
     try {
         const now = new Date();
         const donations = await FoodListing.find({
-            status: 'AVAILABLE',
-            $or: [
-                { isEdible: false },
-                { expiryTime: { $lt: now } },
-                { expiryDate: { $lt: now } },
-                { category: 'EXPIRED' }
-            ]
+            status: 'AVAILABLE'
         })
         .populate('donorId', 'firstName organizationName averageRating reviewCount')
         .sort({ createdAt: -1 });
 
-        const result = donations.map(d => {
+        const result = donations.filter(d => {
+            const expiryValue = d.expiryDate || d.expiryTime;
+            if (!expiryValue && d.isEdible === false) return true;
+            if (!expiryValue) return false;
+
+            let expiryDate;
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(expiryValue)) {
+                const [dd, mm, yyyy] = expiryValue.split('/');
+                expiryDate = new Date(`${yyyy}-${mm}-${dd}T23:59:59`);
+            } else {
+                expiryDate = new Date(expiryValue);
+            }
+
+            const isExpired = !Number.isNaN(expiryDate.getTime()) && expiryDate < now;
+            return d.isEdible === false || isExpired || d.category === 'EXPIRED';
+        }).map(d => {
             const donor = d.donorId;
             const donorIdValue = donor && donor._id ? String(donor._id) : (d.donorId ? String(d.donorId) : '');
             return {
@@ -249,9 +270,10 @@ router.get('/donations/biogas', async (req, res) => {
                 averageRating: donor ? (donor.averageRating || 0) : 0,
                 reviewCount: donor ? (donor.reviewCount || 0) : 0,
                 imageUrls: Array.isArray(d.imageUrls) ? d.imageUrls : [],
-                expiryFlag: (d.expiryTime && d.expiryTime < now) || (d.expiryDate && d.expiryDate < now) ? `Expired on ${new Date(d.expiryTime || d.expiryDate).toLocaleDateString()}` : 'Waste Collection'
+                expiryFlag: (d.expiryTime || d.expiryDate) ? `Expired on ${new Date(d.expiryTime || d.expiryDate).toLocaleDateString()}` : 'Waste Collection'
             };
         });
+
         res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
