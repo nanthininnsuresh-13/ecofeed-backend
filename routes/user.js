@@ -19,38 +19,34 @@ router.put('/profile', async (req, res) => {
     try {
         const { userId, fullName, phoneNumber, location, organizationName, profilePicture, profileImageUrl } = req.body;
 
-        const updateFields = {};
+        const updateData = {};
         if (profileImageUrl !== undefined || profilePicture !== undefined) {
-            updateFields.profileImageUrl = profileImageUrl || profilePicture;
+            updateData.profileImageUrl = profileImageUrl || profilePicture;
         }
 
         if (phoneNumber !== undefined) {
             // Clean and cast to numeric Number
             const cleanPhone = String(phoneNumber).replace(/\D/g, '');
-            updateFields.phoneNumber = Number(cleanPhone) || 0;
+            updateData.phoneNumber = Number(cleanPhone) || 0;
         }
 
-        if (address !== undefined) {
-            updateFields.address = String(address);
-            updateFields.location = String(address); // Sync location with address
-        } else if (location !== undefined) {
-            updateFields.location = String(location);
-            updateFields.address = String(location); // Sync address with location
+        if (location !== undefined) {
+            updateData.location = String(location);
+            updateData.address = String(location); // Keep address synced
         }
 
-        if (fullName !== undefined) updateFields.fullName = String(fullName);
-
-        if (organizationName !== undefined) updateFields.organizationName = String(organizationName);
-
-        if (fullName) {
+        if (fullName !== undefined) {
+            updateData.fullName = String(fullName);
             const parts = fullName.trim().split(' ');
-            updateFields.firstName = parts[0];
-            updateFields.lastName = parts.slice(1).join(' ') || ' ';
+            updateData.firstName = parts[0];
+            updateData.lastName = parts.slice(1).join(' ') || ' ';
         }
+
+        if (organizationName !== undefined) updateData.organizationName = String(organizationName);
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { $set: updateFields },
+            { $set: updateData },
             { new: true, runValidators: false }
         ).select('-password');
 
@@ -58,7 +54,7 @@ router.put('/profile', async (req, res) => {
 
         res.json({ success: true, user: updatedUser });
     } catch (error) {
-        console.error("Profile Update Error:", error.message);
+        console.error("Profile Save Error:", error.message);
         res.status(500).json({ success: false, message: error.message });
     }
 });
