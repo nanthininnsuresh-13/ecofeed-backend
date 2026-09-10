@@ -15,7 +15,7 @@ router.get('/profile/:id', async (req, res) => {
     }
 });
 
-// Update Profile (Safe Pipeline with Enhanced Logging)
+// Update Profile (Safe Pipeline with Enhanced Logging & Geo-Index Fix)
 router.put('/profile', async (req, res) => {
     try {
         const { userId, fullName, organization, organizationName, phoneNumber, location, address, profilePicture, profileImageUrl } = req.body;
@@ -23,6 +23,14 @@ router.put('/profile', async (req, res) => {
         if (!userId) {
             console.error("Profile Update Error: Missing userId in request body");
             return res.status(400).json({ success: false, message: "Missing userId in request body" });
+        }
+
+        // DANGER FIX: Drop legacy geospatial index if it exists on the 'location' field
+        try {
+            await User.collection.dropIndex("location_2dsphere");
+            console.log("Successfully dropped legacy location_2dsphere index.");
+        } catch (e) {
+            // Index doesn't exist or already dropped, ignore
         }
 
         const updateData = {};
