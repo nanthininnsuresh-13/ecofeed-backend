@@ -46,8 +46,9 @@ router.post('/auth/register', async (req, res) => {
             role: normalizedRole,
             phoneNumber,
             organizationName,
-            location: (typeof location === 'object') ? location : { type: "Point", coordinates: [78.6862, 10.7905] },
-            address: (typeof location === 'string') ? location : (req.body.address || 'Trichy, Tamil Nadu, India')
+            location: (typeof location === 'string') ? location : (req.body.address || 'Trichy, Tamil Nadu, India'),
+            address: (typeof location === 'string') ? location : (req.body.address || 'Trichy, Tamil Nadu, India'),
+            geoPoint: (typeof location === 'object' && location.coordinates) ? location : { type: "Point", coordinates: [78.6862, 10.7905] }
         });
 
         res.status(201).json({
