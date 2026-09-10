@@ -15,17 +15,23 @@ router.get('/profile/:id', async (req, res) => {
     }
 });
 
-// Update Profile (Persistence & Correct Data Types with Cloudinary)
+// Update Profile (Safe Pipeline with Enhanced Logging)
 router.put('/profile', async (req, res) => {
     try {
-        const { userId, fullName, phoneNumber, location, address, organizationName, profileImageUrl, profilePicture } = req.body;
+        const { userId, fullName, organization, organizationName, phoneNumber, location, address, profilePicture, profileImageUrl } = req.body;
+
+        if (!userId) {
+            console.error("Profile Update Error: Missing userId in request body");
+            return res.status(400).json({ success: false, message: "Missing userId in request body" });
+        }
 
         const updateData = {};
 
         // Handle Cloudinary Upload if a new photo is provided (Base64)
-        const incomingImage = profileImageUrl || profilePicture;
+        const incomingImage = profilePicture || profileImageUrl;
         if (incomingImage && incomingImage.startsWith('data:image')) {
             try {
+                console.log(`Uploading profile image for user ${userId} to Cloudinary...`);
                 const uploadRes = await cloudinary.uploader.upload(incomingImage, {
                     folder: "ecofeed_profiles",
                     resource_type: "image"
@@ -35,17 +41,20 @@ router.put('/profile', async (req, res) => {
                 console.error("Cloudinary Upload Error:", err.message);
                 // Continue without updating image if upload fails
             }
+        } else if (incomingImage) {
+            updateData.profileImageUrl = incomingImage;
         }
 
         if (phoneNumber !== undefined) {
+            // Ensure numeric casting
             const cleanPhone = String(phoneNumber).replace(/\D/g, '');
             updateData.phoneNumber = Number(cleanPhone) || 0;
         }
 
-        const loc = location || address;
-        if (loc !== undefined) {
-            updateData.location = String(loc);
-            updateData.address = String(loc);
+        const resolvedLocation = location || address;
+        if (resolvedLocation !== undefined) {
+            updateData.location = String(resolvedLocation);
+            updateData.address = String(resolvedLocation);
         }
 
         if (fullName !== undefined) {
@@ -55,7 +64,17 @@ router.put('/profile', async (req, res) => {
             updateData.lastName = parts.slice(1).join(' ') || ' ';
         }
 
-        if (organizationName !== undefined) updateData.organizationName = String(organizationName);
+        const resolvedOrg = organization || organizationName;
+        if (resolvedOrg !== undefined) {
+            updateData.organizationName = String(resolvedOrg);
+        }
+
+        console.log(`Syncing profile for user ${userId}:`, {
+            fullName: updateData.fullName,
+            phoneNumber: updateData.phoneNumber,
+            location: updateData.location,
+            hasPhoto: !!updateData.profileImageUrl
+        });
 
         const updatedUser = await User.findByIdAndUpdate(
             userId,
@@ -63,12 +82,15 @@ router.put('/profile', async (req, res) => {
             { new: true, runValidators: false }
         ).select('-password');
 
-        if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
+        if (!updatedUser) {
+            console.error(`Profile Update Error: User ${userId} not found in database`);
+            return res.status(404).json({ success: false, message: "User not found in database" });
+        }
 
-        res.json({ success: true, user: updatedUser });
+        return res.status(200).json({ success: true, user: updatedUser });
     } catch (error) {
-        console.error("Profile Save Error:", error.message);
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Profile Update Critical Error:", error);
+        return res.status(500).json({ success: false, message: error.message || "Internal Server Error" });
     }
 });
 
