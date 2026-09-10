@@ -6,8 +6,8 @@ const notificationSchema = new mongoose.Schema({
     title: { type: String, required: true },
     message: { type: String, required: true },
     type: { type: String, enum: ['INFO', 'SUCCESS', 'WARNING', 'URGENT'], default: 'INFO' },
-    relatedId: { type: String }, // e.g. Donation ID
-    lotId: { type: String }, // e.g. LOT-#8392
+    relatedId: { type: String, default: null }, // e.g. Donation ID
+    lotId: { type: String, default: null }, // e.g. LOT-#8392
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
