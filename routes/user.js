@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const cloudinary = require('cloudinary').v2;
 
 // Get User Profile
 router.get('/profile/:id', async (req, res) => {
@@ -14,25 +15,37 @@ router.get('/profile/:id', async (req, res) => {
     }
 });
 
-// Update Profile (Persistence & Correct Data Types)
+// Update Profile (Persistence & Correct Data Types with Cloudinary)
 router.put('/profile', async (req, res) => {
     try {
-        const { userId, fullName, phoneNumber, location, organizationName, profilePicture, profileImageUrl } = req.body;
+        const { userId, fullName, phoneNumber, location, address, organizationName, profileImageUrl, profilePicture } = req.body;
 
         const updateData = {};
-        if (profileImageUrl !== undefined || profilePicture !== undefined) {
-            updateData.profileImageUrl = profileImageUrl || profilePicture;
+
+        // Handle Cloudinary Upload if a new photo is provided (Base64)
+        const incomingImage = profileImageUrl || profilePicture;
+        if (incomingImage && incomingImage.startsWith('data:image')) {
+            try {
+                const uploadRes = await cloudinary.uploader.upload(incomingImage, {
+                    folder: "ecofeed_profiles",
+                    resource_type: "image"
+                });
+                updateData.profileImageUrl = uploadRes.secure_url;
+            } catch (err) {
+                console.error("Cloudinary Upload Error:", err.message);
+                // Continue without updating image if upload fails
+            }
         }
 
         if (phoneNumber !== undefined) {
-            // Clean and cast to numeric Number
             const cleanPhone = String(phoneNumber).replace(/\D/g, '');
             updateData.phoneNumber = Number(cleanPhone) || 0;
         }
 
-        if (location !== undefined) {
-            updateData.location = String(location);
-            updateData.address = String(location); // Keep address synced
+        const loc = location || address;
+        if (loc !== undefined) {
+            updateData.location = String(loc);
+            updateData.address = String(loc);
         }
 
         if (fullName !== undefined) {

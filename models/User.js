@@ -8,11 +8,11 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     role: { type: String, enum: ['DONOR', 'NGO', 'BIOGAS'], required: true },
     fullName: { type: String },
-    phoneNumber: { type: Number }, // Explicitly Number for persistence
+    phoneNumber: { type: Number }, // Explicitly Number
     organizationName: { type: String },
     profileImageUrl: { type: String, default: '' },
     address: { type: String, default: 'Trichy, Tamil Nadu, India' },
-    location: { type: String, default: 'Trichy, Tamil Nadu, India' },
+    location: { type: String, default: 'Trichy, Tamil Nadu, India' }, // Explicitly String
     averageRating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
     geoPoint: {
