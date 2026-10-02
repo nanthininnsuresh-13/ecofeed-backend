@@ -18,6 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -36,6 +39,7 @@ fun BiogasDashboardScreen(
     biogasPartnerId: String,
     onNavigateToDetail: (String) -> Unit,
     onNotificationsClicked: () -> Unit,
+    onFeedbackClick: () -> Unit = {},
     onProfileClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -49,8 +53,23 @@ fun BiogasDashboardScreen(
     val authState by authViewModel.uiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                authState.userId?.let { authViewModel.fetchUserProfile(it) }
+                viewModel.fetchAvailableDonations()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
+        authState.userId?.let { authViewModel.fetchUserProfile(it) }
         viewModel.fetchAvailableDonations()
     }
 
@@ -72,6 +91,10 @@ fun BiogasDashboardScreen(
                 },
                 onNotificationsClick = { 
                     onNotificationsClicked()
+                    coroutineScope.launch { drawerState.close() }
+                },
+                onFeedbackClick = {
+                    onFeedbackClick()
                     coroutineScope.launch { drawerState.close() }
                 },
                 onSettingsClick = { 
@@ -111,14 +134,20 @@ fun BiogasDashboardScreen(
                                 }
                                 
                                 // For simplicity, navigating to the first accepted donation's address
-                                val destination = acceptedDonations.first().address ?: "Anna Nagar, Tiruchirappalli"
+                                val firstDonation = acceptedDonations.first()
+                                val destination = if (firstDonation.coordinates.size == 2) {
+                                    "${firstDonation.coordinates[1]},${firstDonation.coordinates[0]}"
+                                } else {
+                                    firstDonation.address ?: "Anna Nagar, Tiruchirappalli"
+                                }
+                                
                                 val mapUri = Uri.parse("google.navigation:q=${Uri.encode(destination)}")
                                 val mapIntent = Intent(Intent.ACTION_VIEW, mapUri).apply {
                                     setPackage("com.google.android.apps.maps")
                                 }
                                 try {
                                     context.startActivity(mapIntent)
-                                } catch (_: ActivityNotFoundException) {
+                                } catch (_: Exception) {
                                     val browserUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${Uri.encode(destination)}")
                                     context.startActivity(Intent(Intent.ACTION_VIEW, browserUri))
                                 }
@@ -143,7 +172,8 @@ fun BiogasDashboardScreen(
                         text = "Waste Collection Requests",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
 
                     LazyColumn(
@@ -178,7 +208,10 @@ fun BiogasWasteCard(item: FoodListingDto, onAccept: () -> Unit, onClick: () -> U
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = onClick
     ) {
@@ -187,29 +220,29 @@ fun BiogasWasteCard(item: FoodListingDto, onAccept: () -> Unit, onClick: () -> U
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(EcoGreen.copy(alpha = 0.1f)),
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = EcoGreen, modifier = Modifier.size(32.dp))
+                Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(text = "${item.quantity} • ${item.establishmentName ?: item.donorName ?: "Unknown source"}", color = Color.Gray, fontSize = 12.sp)
-                Text(text = "Expiry: ${item.expiryTime ?: item.expiryDate ?: "Not set"}", color = Color.DarkGray, fontSize = 11.sp)
-                Text(text = "Location: ${item.address ?: "Anna Nagar"}", style = MaterialTheme.typography.bodySmall)
+                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = "${item.quantity} • ${item.establishmentName ?: item.donorName ?: "Unknown source"}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                Text(text = "Expiry: ${item.expiryTime ?: item.expiryDate ?: "Not set"}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+                Text(text = "Location: ${item.address ?: "Anna Nagar"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Text(text = "1.3 km", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Text(text = "1.3 km", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(8.dp))
                 val isAvailable = item.status.equals("AVAILABLE", ignoreCase = true)
                 Button(
                     onClick = onAccept,
                     enabled = isAvailable,
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isAvailable) EcoGreen else Color.Gray),
+                    colors = ButtonDefaults.buttonColors(containerColor = if (isAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.height(36.dp)

@@ -30,6 +30,7 @@ fun EcoFeedDrawerContent(
     onProfileClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onNotificationsClick: () -> Unit,
+    onFeedbackClick: () -> Unit = {},
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit,
@@ -127,6 +128,12 @@ fun EcoFeedDrawerContent(
         DrawerItem(Icons.Default.History, "Activity History", onHistoryClick)
         DrawerItem(Icons.Default.Notifications, "Notifications", onNotificationsClick)
         
+        if (userRole.contains("Donor", ignoreCase = true)) {
+            DrawerItem(Icons.Default.Star, "Received Feedbacks", onFeedbackClick)
+        } else {
+            DrawerItem(Icons.Default.RateReview, "Rate Orders", onFeedbackClick)
+        }
+
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp), color = Color.LightGray.copy(alpha = 0.5f))
         
         DrawerItem(Icons.Default.Settings, "Settings", onSettingsClick)

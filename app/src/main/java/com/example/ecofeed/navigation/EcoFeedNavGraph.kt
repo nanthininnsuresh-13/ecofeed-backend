@@ -1,5 +1,11 @@
 package com.example.ecofeed.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +35,8 @@ import com.example.ecofeed.ui.notifications.NotificationsScreen
 import com.example.ecofeed.ui.history.ActivityHistoryScreen
 import com.example.ecofeed.ui.settings.ChangePasswordScreen
 import com.example.ecofeed.ui.profile.EditProfileScreen
+import com.example.ecofeed.ui.feedback.FeedbackReceivedScreen
+import com.example.ecofeed.ui.feedback.GiveFeedbackScreen
 
 object EcoFeedRoutes {
     const val LOGIN = "login"
@@ -51,6 +59,8 @@ object EcoFeedRoutes {
     const val CHANGE_PASSWORD = "change_password"
     const val ACTIVITY_HISTORY = "activity_history"
     const val PRIVACY_POLICY = "privacy_policy"
+    const val FEEDBACK_RECEIVED = "feedback_received"
+    const val GIVE_FEEDBACK = "give_feedback"
 }
 
 @Composable
@@ -64,6 +74,10 @@ fun EcoFeedNavGraph() {
     NavHost(
         navController = navController,
         startDestination = EcoFeedRoutes.LOGIN,
+        enterTransition = { slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(250)) + fadeIn(animationSpec = tween(200)) },
+        exitTransition = { slideOutHorizontally(targetOffsetX = { -it }, animationSpec = tween(250)) + fadeOut(animationSpec = tween(200)) },
+        popEnterTransition = { slideInHorizontally(initialOffsetX = { -it }, animationSpec = tween(250)) + fadeIn(animationSpec = tween(200)) },
+        popExitTransition = { slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(250)) + fadeOut(animationSpec = tween(200)) }
     ) {
         composable(EcoFeedRoutes.LOGIN) {
             LoginScreen(
@@ -110,6 +124,7 @@ fun EcoFeedNavGraph() {
                 onHistoryClick = { navController.navigate(EcoFeedRoutes.ACTIVITY_HISTORY) },
                 onProfileClick = { navController.navigate(EcoFeedRoutes.PROFILE) },
                 onNotificationsClick = { navController.navigate(EcoFeedRoutes.NOTIFICATIONS) },
+                onFeedbackClick = { navController.navigate(EcoFeedRoutes.FEEDBACK_RECEIVED) },
                 onSettingsClick = { navController.navigate(EcoFeedRoutes.SETTINGS) },
                 onAboutClick = { navController.navigate(EcoFeedRoutes.ABOUT) },
                 onLogout = {
@@ -129,6 +144,7 @@ fun EcoFeedNavGraph() {
                 onNavigateToDetail = { id -> navController.navigate("food_detail/$id") },
                 onViewMapClicked = { navController.navigate(EcoFeedRoutes.NGO_MAP) },
                 onNotificationsClicked = { navController.navigate(EcoFeedRoutes.NOTIFICATIONS) },
+                onFeedbackClick = { navController.navigate(EcoFeedRoutes.GIVE_FEEDBACK) },
                 onProfileClick = { navController.navigate(EcoFeedRoutes.PROFILE) },
                 onHistoryClick = { navController.navigate(EcoFeedRoutes.ACTIVITY_HISTORY) },
                 onSettingsClick = { navController.navigate(EcoFeedRoutes.SETTINGS) },
@@ -149,6 +165,7 @@ fun EcoFeedNavGraph() {
                 biogasPartnerId = uiState.userId ?: "",
                 onNavigateToDetail = { id -> navController.navigate("biogas_waste_detail_screen/$id") },
                 onNotificationsClicked = { navController.navigate(EcoFeedRoutes.NOTIFICATIONS) },
+                onFeedbackClick = { navController.navigate(EcoFeedRoutes.GIVE_FEEDBACK) },
                 onProfileClick = { navController.navigate(EcoFeedRoutes.PROFILE) },
                 onHistoryClick = { navController.navigate(EcoFeedRoutes.ACTIVITY_HISTORY) },
                 onSettingsClick = { navController.navigate(EcoFeedRoutes.SETTINGS) },
@@ -201,9 +218,7 @@ fun EcoFeedNavGraph() {
         composable(EcoFeedRoutes.NOTIFICATIONS) {
             NotificationsScreen(
                 onBack = { navController.popBackStack() },
-                onNotificationClick = { title ->
-                    // Logic to navigate to details if needed
-                },
+                onNotificationClick = { _ -> },
                 authViewModel = authViewModel
             )
         }
@@ -273,6 +288,20 @@ fun EcoFeedNavGraph() {
             EditProfileScreen(
                 viewModel = authViewModel,
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(EcoFeedRoutes.FEEDBACK_RECEIVED) {
+            FeedbackReceivedScreen(
+                donorId = uiState.userId ?: "",
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(EcoFeedRoutes.GIVE_FEEDBACK) {
+            GiveFeedbackScreen(
+                onBack = { navController.popBackStack() },
+                authViewModel = authViewModel
             )
         }
     }

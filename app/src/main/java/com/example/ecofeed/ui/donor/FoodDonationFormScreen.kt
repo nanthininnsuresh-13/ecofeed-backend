@@ -458,35 +458,27 @@ fun FoodDonationFormScreen(
             // Submit Button
             Button(
                 onClick = {
-                    val request = CreateDonationRequest(
+                    val request = viewModel.buildCompressedDonationRequest(
+                        context = context,
                         donorId = donorId,
                         foodName = foodName,
                         donorSourceType = donorSourceType,
-                        establishmentName = establishmentName.ifBlank { null },
-                        hotelName = establishmentName.ifBlank { null },
+                        establishmentName = establishmentName,
                         category = category,
-                        quantityKg = quantity.toDoubleOrNull() ?: 0.0,
-                        mealsCount = mealsCount.toIntOrNull() ?: 0,
-                        quantity = "$quantity kg",
-                        prepTime = prepTime.ifBlank { null },
-                        expiryDate = expiryDate.ifBlank { null },
-                        expiryTime = expiryDate.ifBlank { null },
-                        storageCondition = storageCondition,
-                        dietaryType = dietaryCategory,
+                        quantity = quantity,
+                        mealsCount = mealsCount,
+                        prepTime = prepTime,
+                        expiryDate = expiryDate,
+                        addressText = addressText,
+                        latitude = latitude,
+                        longitude = longitude,
                         dietaryCategory = dietaryCategory,
                         packagingType = packagingType,
                         donorPhoneNumber = donorPhoneNumber,
-                        mealComposition = mealCompositionText
-                            .split(",")
-                            .map { it.trim() }
-                            .filter { it.isNotEmpty() },
-                        description = description.ifBlank { null },
+                        mealCompositionText = mealCompositionText,
+                        description = description,
                         isEdible = isEdible,
-                        address = addressText.ifBlank { "Trichy, Tamil Nadu, India" },
-                        latitude = if (latitude == 0.0) 10.7905 else latitude,
-                        longitude = if (longitude == 0.0) 78.6862 else longitude,
-                        coordinates = if (latitude == 0.0) listOf(78.6862, 10.7905) else listOf(longitude, latitude),
-                        imageUrls = selectedImages.map { it.toString() }
+                        selectedImages = selectedImages
                     )
                     viewModel.submitDonation(request, onSubmitClick)
                 },

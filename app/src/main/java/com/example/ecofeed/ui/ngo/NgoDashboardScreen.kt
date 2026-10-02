@@ -1,5 +1,7 @@
 package com.example.ecofeed.ui.ngo
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,6 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,6 +30,7 @@ import com.example.ecofeed.data.model.FoodListingDto
 import com.example.ecofeed.ui.auth.AuthViewModel
 import com.example.ecofeed.ui.common.EcoFeedDrawerContent
 import com.example.ecofeed.ui.common.EcoFeedTopAppBar
+import com.example.ecofeed.ui.theme.PrimaryGreen
 import kotlinx.coroutines.launch
 
 private val EcoGreen = Color(0xFF008000)
@@ -36,6 +42,7 @@ fun NgoDashboardScreen(
     onNavigateToDetail: (String) -> Unit,
     onViewMapClicked: () -> Unit,
     onNotificationsClicked: () -> Unit,
+    onFeedbackClick: () -> Unit = {},
     onProfileClick: () -> Unit,
     onHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -49,28 +56,53 @@ fun NgoDashboardScreen(
     val authState by authViewModel.uiState.collectAsState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
     
     var searchQuery by remember { mutableStateOf("") }
     var feedbackDonationId by remember { mutableStateOf<String?>(null) }
 
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                authState.userId?.let { authViewModel.fetchUserProfile(it) }
+                viewModel.fetchAvailableDonations()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     LaunchedEffect(Unit) {
+        authState.userId?.let { authViewModel.fetchUserProfile(it) }
         viewModel.fetchAvailableDonations()
     }
 
     feedbackDonationId?.let { donationId ->
-        val donorId = uiState.availableDonations.firstOrNull { it._id == donationId }?.donorId ?: ""
-        NgoFeedbackDialog(
-            donationId = donationId,
-            donorId = donorId,
-            ngoId = ngoId,
-            onDismiss = { feedbackDonationId = null },
-            onSubmit = { review ->
-                viewModel.submitReview(review) {
-                    feedbackDonationId = null
-                    Toast.makeText(context, "Thank you for your feedback!", Toast.LENGTH_SHORT).show()
-                }
+        val donation = uiState.availableDonations.find { it._id == donationId }
+        if (donation != null) {
+            val donorId = donation.donorId.orEmpty()
+            if (donationId.isNotBlank() && donorId.isNotBlank()) {
+                NgoFeedbackDialog(
+                    donationId = donationId,
+                    donorId = donorId,
+                    ngoId = ngoId,
+                    foodTitle = donation.title,
+                    onDismiss = { feedbackDonationId = null },
+                    onSubmit = { review ->
+                        viewModel.submitReview(review) {
+                            feedbackDonationId = null
+                            Toast.makeText(context, "Thank you for your feedback!", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
+            } else {
+                feedbackDonationId = null
             }
-        )
+        } else {
+            feedbackDonationId = null
+        }
     }
 
     ModalNavigationDrawer(
@@ -91,6 +123,10 @@ fun NgoDashboardScreen(
                 },
                 onNotificationsClick = { 
                     onNotificationsClicked()
+                    coroutineScope.launch { drawerState.close() }
+                },
+                onFeedbackClick = {
+                    onFeedbackClick()
                     coroutineScope.launch { drawerState.close() }
                 },
                 onSettingsClick = { 
@@ -125,7 +161,30 @@ fun NgoDashboardScreen(
                             .navigationBarsPadding()
                     ) {
                         Button(
-                            onClick = onViewMapClicked,
+                            onClick = {
+                                val firstDonation = uiState.availableDonations.firstOrNull()
+                                if (firstDonation != null) {
+                                    val destination = if (firstDonation.coordinates.size == 2) {
+                                        "${firstDonation.coordinates[1]},${firstDonation.coordinates[0]}"
+                                    } else {
+                                        firstDonation.address ?: "Trichy, Tamil Nadu, India"
+                                    }
+                                    
+                                    val gmmIntentUri = Uri.parse("google.navigation:q=${Uri.encode(destination)}")
+                                    val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
+                                        setPackage("com.google.android.apps.maps")
+                                    }
+                                    try {
+                                        context.startActivity(mapIntent)
+                                    } catch (_: Exception) {
+                                        // Fallback to browser
+                                        val browserUri = Uri.parse("https://www.google.com/maps/dir/?api=1&destination=${Uri.encode(destination)}")
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, browserUri))
+                                    }
+                                } else {
+                                    Toast.makeText(context, "No active donations to show on map", Toast.LENGTH_SHORT).show()
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
@@ -151,7 +210,8 @@ fun NgoDashboardScreen(
                         text = "Available Donations Near You",
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
 
                     // Search Bar
@@ -165,8 +225,8 @@ fun NgoDashboardScreen(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface
                         )
                     )
 
@@ -209,78 +269,86 @@ fun NgoDonationCard(item: FoodListingDto, onAccept: () -> Unit, onClick: () -> U
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         onClick = onClick
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Thumbnail (safe access)
-            val image = item.imageUrls?.firstOrNull().orEmpty()
-            if (image.isNotBlank()) {
+        Column {
+            // CRITICAL FIX: Full-width image at the top of the card
+            val imageUrl = item.imageUrl ?: item.imageUrls.firstOrNull()
+            if (!imageUrl.isNullOrBlank()) {
                 AsyncImage(
-                    model = image,
-                    contentDescription = null,
+                    model = imageUrl,
+                    contentDescription = "Donated Food Image",
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = androidx.compose.ui.res.painterResource(id = com.example.ecofeed.R.drawable.ic_placeholder_food),
+                    placeholder = androidx.compose.ui.res.painterResource(id = com.example.ecofeed.R.drawable.ic_placeholder_food)
                 )
             } else {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFE9ECEF)),
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Restaurant, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(32.dp))
+                    Icon(Icons.Default.Restaurant, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                if (item.isAiRecommended) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = EcoGreen.copy(alpha = 0.12f)) {
-                        Text(text = "🤖 AI Recommended", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = EcoGreen, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            // Card content below the image
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    if (item.isAiRecommended) {
+                        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)) {
+                            Text(text = "🤖 AI Recommended", modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
                     }
-                }
-                Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(text = "${item.quantity} • Expires: ${item.expiryDate}", color = Color.Gray, fontSize = 12.sp)
-                Text(text = "Donor: ${item.establishmentName ?: item.donorName ?: item.hotelName ?: item.address ?: "Nearby Donor"}", style = MaterialTheme.typography.bodySmall, color = EcoGreen)
-                Text(text = "📞 ${item.donorPhoneNumber ?: "No contact"} • ⭐ ${String.format("%.1f", item.averageRating)} (${item.reviewCount} reviews)", color = Color(0xFFFFA500), fontSize = 11.sp)
+                    Text(text = item.title, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurface)
+                    Text(text = "${item.quantity} • Expires: ${item.expiryDate}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text(text = "Donor: ${item.establishmentName ?: item.donorName ?: item.hotelName ?: item.address ?: "Nearby Donor"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                    Text(text = "📞 ${item.donorPhoneNumber ?: "No contact"} • ⭐ ${String.format("%.1f", item.averageRating)} (${item.reviewCount} reviews)", color = Color(0xFFFFA500), fontSize = 11.sp)
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    val dietaryBadge = item.dietaryCategory ?: item.dietaryType ?: "VEG"
-                    Surface(shape = RoundedCornerShape(8.dp), color = EcoGreen.copy(alpha = 0.08f)) {
-                        Text(text = dietaryBadge, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = EcoGreen, style = MaterialTheme.typography.labelSmall)
-                    }
-                    item.packagingType?.let { pt ->
-                        Surface(shape = RoundedCornerShape(8.dp), color = Color.LightGray.copy(alpha = 0.08f)) {
-                            Text(text = pt, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.DarkGray, style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        val dietaryBadge = item.dietaryCategory ?: item.dietaryType ?: "VEG"
+                        Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)) {
+                            Text(text = dietaryBadge, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
+                        }
+                        item.packagingType?.let { pt ->
+                            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.08f)) {
+                                Text(text = pt, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                            }
                         }
                     }
                 }
-            }
 
-            Column(horizontalAlignment = Alignment.End) {
-                Text(text = "📍 1.2 km", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                Spacer(modifier = Modifier.height(8.dp))
-                val isAvailable = item.status.equals("AVAILABLE", ignoreCase = true)
-                Button(
-                    onClick = onAccept,
-                    enabled = isAvailable,
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isAvailable) EcoGreen else Color.Gray),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(32.dp)
-                ) {
-                    Text(if (isAvailable) "ACCEPT" else "ACCEPTED", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = "📍 1.2 km", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val isAvailable = item.status.equals("AVAILABLE", ignoreCase = true)
+                    Button(
+                        onClick = onAccept,
+                        enabled = isAvailable,
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isAvailable) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text(if (isAvailable) "ACCEPT" else "ACCEPTED", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

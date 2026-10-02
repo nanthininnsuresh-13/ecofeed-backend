@@ -27,6 +27,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+import androidx.compose.ui.text.style.TextAlign
+import com.example.ecofeed.util.bounceClick
+
 private val EcoGreen = Color(0xFF008000)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,12 +106,12 @@ fun SignUpScreen(
                             text = "Create Account",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                         Text(
                             text = "Join the movement",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -122,9 +125,13 @@ fun SignUpScreen(
                     onValueChange = { viewModel.updateFirstName(it) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("First Name", color = Color.Gray) },
+                    placeholder = { Text("First Name", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                    ),
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
@@ -138,9 +145,13 @@ fun SignUpScreen(
                     onValueChange = { viewModel.updateLastName(it) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("Last Name", color = Color.Gray) },
+                    placeholder = { Text("Last Name", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                    ),
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null, tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
@@ -154,9 +165,13 @@ fun SignUpScreen(
                     onValueChange = { viewModel.updateEmail(it) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("Email", color = Color.Gray) },
+                    placeholder = { Text("Email", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                    ),
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Email, contentDescription = null, tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -173,14 +188,18 @@ fun SignUpScreen(
                     onValueChange = { viewModel.updatePassword(it) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("Password", color = Color.Gray) },
+                    placeholder = { Text("Password", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                    ),
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },
                     trailingIcon = {
                         val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                            Icon(imageVector = image, contentDescription = "Toggle password visibility")
+                            Icon(imageVector = image, contentDescription = "Toggle password visibility", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -199,14 +218,18 @@ fun SignUpScreen(
                     onValueChange = { viewModel.updateConfirmPassword(it) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    placeholder = { Text("Confirm Password", color = Color.Gray) },
+                    placeholder = { Text("Confirm Password", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onBackground
+                    ),
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     },
                     trailingIcon = {
                         val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                         IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                            Icon(imageVector = image, contentDescription = "Toggle password visibility")
+                            Icon(imageVector = image, contentDescription = "Toggle password visibility", tint = MaterialTheme.colorScheme.primary)
                         }
                     },
                     visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -222,7 +245,7 @@ fun SignUpScreen(
             item {
                 if (uiState.isLoading) {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = EcoGreen)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else {
                     // Action Button
@@ -230,9 +253,10 @@ fun SignUpScreen(
                         onClick = { viewModel.signUp(onNavigateToRoleSelection) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(56.dp)
+                            .bounceClick(),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EcoGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         enabled = true // Always enabled for testing flow
                     ) {
                         Text(

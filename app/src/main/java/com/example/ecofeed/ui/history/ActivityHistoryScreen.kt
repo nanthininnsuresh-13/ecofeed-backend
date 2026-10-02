@@ -138,13 +138,13 @@ fun ActivityHistoryScreen(
                 val filteredList = remember(selectedTab, safeHistoryList, tabs) {
                     val tabName = tabs.getOrNull(selectedTab) ?: "All"
                     when (tabName) {
-                        "Accepted" -> safeHistoryList.filter { it.status.uppercase() == "ACCEPTED" }
-                        "Biogas" -> safeHistoryList.filter { it.status.uppercase() == "BIOGAS" }
-                        "Pending" -> safeHistoryList.filter { it.status.uppercase() == "PENDING" || it.status.uppercase() == "AVAILABLE" }
-                        "Requested" -> safeHistoryList.filter { it.status.uppercase() == "REQUESTED" }
-                        "Pickup" -> safeHistoryList.filter { it.status.uppercase() == "PICKUP" }
-                        "Delivered" -> safeHistoryList.filter { it.status.uppercase() == "DELIVERED" || it.status.uppercase() == "COMPLETED" }
-                        "Organic" -> safeHistoryList.filter { it.title.contains("Waste", ignoreCase = true) }
+                        "Accepted" -> safeHistoryList.filter { it.status.orEmpty().uppercase() == "ACCEPTED" }
+                        "Biogas" -> safeHistoryList.filter { it.status.orEmpty().uppercase() == "BIOGAS" }
+                        "Pending" -> safeHistoryList.filter { it.status.orEmpty().uppercase() == "PENDING" || it.status.orEmpty().uppercase() == "AVAILABLE" }
+                        "Requested" -> safeHistoryList.filter { it.status.orEmpty().uppercase() == "REQUESTED" }
+                        "Pickup" -> safeHistoryList.filter { it.status.orEmpty().uppercase() == "PICKUP" }
+                        "Delivered" -> safeHistoryList.filter { it.status.orEmpty().uppercase() == "DELIVERED" || it.status.orEmpty().uppercase() == "COMPLETED" }
+                        "Organic" -> safeHistoryList.filter { it.title.orEmpty().contains("Waste", ignoreCase = true) }
                         else -> safeHistoryList
                     }
                 }
@@ -177,7 +177,7 @@ fun HistoryCard(item: HistoryItemDto, role: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -186,16 +186,30 @@ fun HistoryCard(item: HistoryItemDto, role: String) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = item.lotId ?: "LOT-0000", style = MaterialTheme.typography.labelMedium, color = EcoGreen, fontWeight = FontWeight.Bold)
+                Text(
+                    text = item.lotId ?: "LOT-0000",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
                 StatusBadge(item.status ?: "UNKNOWN")
             }
             
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = item.title ?: "Untitled Item", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(text = "Quantity: ${item.quantity ?: "N/A"}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(
+                text = item.title ?: "Untitled Item",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Quantity: ${item.quantity ?: "N/A"}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = LightGreen.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(8.dp))
             
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -203,10 +217,14 @@ fun HistoryCard(item: HistoryItemDto, role: String) {
                     imageVector = Icons.Default.Schedule,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = Color.Gray
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(text = item.createdAt ?: "Recently", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Text(
+                    text = item.createdAt ?: "Recently",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 
                 Spacer(modifier = Modifier.weight(1f))
                 
@@ -214,7 +232,12 @@ fun HistoryCard(item: HistoryItemDto, role: String) {
                     "DONOR" -> "Recipient: ${item.recipientName ?: "Processing"}"
                     else -> "Donor: ${item.donorName ?: "EcoFeed Donor"}"
                 }
-                Text(text = peerLabel, style = MaterialTheme.typography.labelSmall, color = EcoGreen, fontWeight = FontWeight.Medium)
+                Text(
+                    text = peerLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }

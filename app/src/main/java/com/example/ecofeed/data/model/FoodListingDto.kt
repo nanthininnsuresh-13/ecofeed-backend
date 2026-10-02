@@ -21,6 +21,7 @@ data class FoodListingDto(
     val isEdible: Boolean = true,
     val priorityLevel: String? = "MEDIUM",
     val address: String? = "Location Not Provided",
+    val imageUrl: String? = null,
     val imageUrls: List<String> = emptyList(),
     val status: String = "AVAILABLE",
     val donorSourceType: String? = null,

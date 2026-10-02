@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
+import com.example.ecofeed.util.bounceClick
+
 private val EcoGreen = Color(0xFF008000)
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,8 +90,9 @@ fun BiogasWasteDetailScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = EcoGreen),
+                        .padding(16.dp)
+                        .bounceClick(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text("ACCEPT PICKUP FOR BIOGAS", color = Color.White, fontWeight = FontWeight.Bold)
@@ -112,7 +115,7 @@ fun BiogasWasteDetailScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF8F9FA))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)
@@ -120,7 +123,7 @@ fun BiogasWasteDetailScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(18.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
@@ -128,12 +131,13 @@ fun BiogasWasteDetailScreen(
                         Text(
                             text = donation.title.ifBlank { "Waste Collection" },
                             style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = donation.category?.ifBlank { "Waste" } ?: "Waste",
-                            color = EcoGreen,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -143,26 +147,26 @@ fun BiogasWasteDetailScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(18.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Source", fontWeight = FontWeight.Bold)
-                        Text(text = donation.establishmentName ?: donation.donorName ?: "Unknown source")
-                        Text(text = "Phone: ${donation.donorPhoneNumber ?: "Not available"}")
+                        Text("Source", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = donation.establishmentName ?: donation.donorName ?: "Unknown source", color = MaterialTheme.colorScheme.onSurface)
+                        Text(text = "Phone: ${donation.donorPhoneNumber ?: "Not available"}", color = MaterialTheme.colorScheme.onSurface)
                         if (donation.donorPhoneNumber?.isNotBlank() == true) {
                             Button(
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${donation.donorPhoneNumber}"))
                                     context.startActivity(intent)
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = EcoGreen.copy(alpha = 0.12f)),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
-                                Icon(Icons.Default.Call, contentDescription = null, tint = EcoGreen)
+                                Icon(Icons.Default.Call, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Call Donor", color = EcoGreen)
+                                Text("Call Donor", color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
@@ -172,12 +176,12 @@ fun BiogasWasteDetailScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(18.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Waste Details", fontWeight = FontWeight.Bold)
+                        Text("Waste Details", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         DetailRow("Weight", "${donation.quantityKg ?: 0.0} kg")
                         DetailRow("Expiry", donation.expiryTime ?: donation.expiryDate ?: "No expiry")
                         DetailRow("Packaging", donation.packagingType ?: "Not specified")
@@ -189,22 +193,22 @@ fun BiogasWasteDetailScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(18.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Notes", fontWeight = FontWeight.Bold)
+                        Text("Notes", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         if (!donation.description.isNullOrBlank()) {
-                            Text(donation.description ?: "No description provided")
+                            Text(donation.description ?: "No description provided", color = MaterialTheme.colorScheme.onSurface)
                         } else {
-                            Text("No notes provided by donor.")
+                            Text("No notes provided by donor.", color = MaterialTheme.colorScheme.onSurface)
                         }
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = EcoGreen, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(donation.address ?: "Location not provided")
+                            Text(donation.address ?: "Location not provided", color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
@@ -220,7 +224,7 @@ private fun DetailRow(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Color.Gray)
-        Text(value, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }

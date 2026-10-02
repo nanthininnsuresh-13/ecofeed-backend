@@ -27,6 +27,7 @@ data class DonationItemDto(
     @SerializedName("isEdible") val isEdible: Boolean? = true,
     @SerializedName("status") val status: String? = "AVAILABLE",
     @SerializedName("address") val address: String? = "Location not specified",
+    @SerializedName("imageUrl") val imageUrl: String? = null,
     @SerializedName("imageUrls") val imageUrls: List<String>? = emptyList(),
     @SerializedName("createdAt") val createdAt: String? = ""
 )

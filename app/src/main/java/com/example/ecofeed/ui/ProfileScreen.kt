@@ -25,7 +25,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.painterResource
 import coil.compose.AsyncImage
+import com.example.ecofeed.R
 import com.example.ecofeed.data.model.UpdateProfileRequest
 import com.example.ecofeed.ui.auth.AuthViewModel
 import kotlinx.coroutines.launch
@@ -61,102 +63,107 @@ fun ProfileScreen(
                         Icon(Icons.Default.Edit, contentDescription = "Edit Profile", tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = EcoGreen)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
             )
         }
     ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .background(LightGreen)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Surface(
+            modifier = Modifier.fillMaxSize().padding(innerPadding),
+            color = MaterialTheme.colorScheme.background
         ) {
-            // Profile Photo Section
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (!uiState.profileImageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = uiState.profileImageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = EcoGreen.copy(alpha = 0.5f)
+                // Profile Photo Section
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!uiState.profileImageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = uiState.profileImageUrl,
+                            contentDescription = "Profile Picture",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(id = android.R.drawable.ic_menu_report_image),
+                            placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(80.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "${uiState.firstName} ${uiState.lastName}",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = uiState.userRole ?: uiState.role,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = "${uiState.firstName} ${uiState.lastName}",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
-            
-            Surface(
-                color = EcoGreen.copy(alpha = 0.1f),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.padding(top = 8.dp)
-            ) {
-                Text(
-                    text = uiState.userRole ?: uiState.role,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    color = EcoGreen,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // Info Cards
-            ProfileInfoCard(Icons.Default.Email, "Email Address", uiState.email)
-            Spacer(modifier = Modifier.height(12.dp))
-            ProfileInfoCard(Icons.Default.Phone, "Phone Number", uiState.phoneNumber ?: "Not provided")
-            Spacer(modifier = Modifier.height(12.dp))
-            ProfileInfoCard(Icons.Default.Business, "Organization", uiState.organizationName ?: "Not provided")
-            Spacer(modifier = Modifier.height(12.dp))
-            ProfileInfoCard(Icons.Default.LocationOn, "Location", uiState.address ?: "Trichy, Tamil Nadu, India")
+                // Info Cards
+                ProfileInfoCard(Icons.Default.Email, "Email Address", uiState.email)
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfileInfoCard(Icons.Default.Phone, "Phone Number", uiState.phoneNumber ?: "Not provided")
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfileInfoCard(Icons.Default.Business, "Organization", uiState.organizationName ?: "Not provided")
+                Spacer(modifier = Modifier.height(12.dp))
+                ProfileInfoCard(Icons.Default.LocationOn, "Location", uiState.address ?: "Trichy, Tamil Nadu, India")
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            OutlinedButton(
-                onClick = onChangePasswordClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = EcoGreen)
-            ) {
-                Icon(Icons.Default.Lock, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("CHANGE PASSWORD", fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Button(
-                onClick = onEditClick,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = EcoGreen)
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("EDIT PROFILE", fontWeight = FontWeight.Bold)
+                OutlinedButton(
+                    onClick = onChangePasswordClick,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Lock, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("CHANGE PASSWORD", fontWeight = FontWeight.Bold)
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Button(
+                    onClick = onEditClick,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("EDIT PROFILE", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
@@ -167,18 +174,21 @@ fun ProfileInfoCard(icon: ImageVector, label: String, value: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, contentDescription = null, tint = EcoGreen, modifier = Modifier.size(24.dp))
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
             }
         }
     }

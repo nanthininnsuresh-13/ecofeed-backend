@@ -62,6 +62,19 @@ interface EcoFeedApiService {
         @Query("role") role: String
     ): Response<List<HistoryItemDto>>
 
-    @GET("notifications/{userId}")
-    suspend fun getNotifications(@Path("userId") userId: String): Response<List<NotificationDto>>
+    @GET("notifications")
+    suspend fun getNotifications(
+        @Query("userId") userId: String,
+        @Query("role") role: String
+    ): Response<List<NotificationDto>>
+
+    @PATCH("notifications/{id}/read")
+    suspend fun markNotificationAsRead(@Path("id") id: String): Response<Map<String, Any>>
+
+    // FEEDBACK ROUTES
+    @POST("feedback")
+    suspend fun submitFeedback(@Body request: FeedbackRequest): Response<Map<String, Any>>
+
+    @GET("feedback/donor/{donorId}")
+    suspend fun getDonorFeedback(@Path("donorId") donorId: String): Response<List<FeedbackDto>>
 }

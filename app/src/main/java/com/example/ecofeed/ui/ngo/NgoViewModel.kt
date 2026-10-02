@@ -3,8 +3,8 @@ package com.example.ecofeed.ui.ngo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ecofeed.data.api.RetrofitClient
+import com.example.ecofeed.data.model.FeedbackRequest
 import com.example.ecofeed.data.model.FoodListingDto
-import com.example.ecofeed.data.model.ReviewRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,17 +68,25 @@ class NgoViewModel : ViewModel() {
         }
     }
     
-    fun submitReview(reviewRequest: ReviewRequest, onSuccess: () -> Unit) {
+    fun submitReview(reviewRequest: FeedbackRequest, onSuccess: () -> Unit) {
+        if (reviewRequest.donationId.isBlank() || reviewRequest.donorId.isBlank() || reviewRequest.reviewerId.isBlank()) {
+            _uiState.update { it.copy(error = "Missing donation feedback data") }
+            return
+        }
+
+        _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.addReview(reviewRequest)
+                val response = RetrofitClient.api.submitFeedback(reviewRequest)
                 if (response.isSuccessful) {
+                    _uiState.update { it.copy(isLoading = false) }
                     onSuccess()
                 } else {
-                    _uiState.update { it.copy(error = "Failed to submit review") }
+                    _uiState.update { it.copy(isLoading = false, error = "Failed to submit review: ${response.message()}") }
                 }
             } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.localizedMessage ?: "Review submission failed") }
+                _uiState.update { it.copy(isLoading = false, error = e.localizedMessage ?: "Review submission failed") }
+                android.util.Log.e("NGO_VIEWMODEL", "SubmitReview Error: ${e.message}")
             }
         }
     }

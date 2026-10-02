@@ -12,6 +12,8 @@ import kotlinx.coroutines.launch
 import android.app.Application
 import android.content.Context
 import com.example.ecofeed.data.UserPreferences
+import com.example.ecofeed.service.EcoFeedNotificationHelper
+import com.example.ecofeed.service.NotificationTracker
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 
@@ -38,6 +40,7 @@ data class AuthUiState(
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private val prefs = UserPreferences(application)
+    private val notificationTracker = NotificationTracker(application)
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -227,42 +230,61 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun updateProfile(request: UpdateProfileRequest) {
+        if (request.userId.isBlank()) {
+            _uiState.update { it.copy(updateError = "Session error: Missing User ID") }
+            return
+        }
+
         _uiState.update { it.copy(isLoading = true, updateError = null, isUpdateSuccess = false) }
         viewModelScope.launch {
             try {
+                android.util.Log.d("PROFILE_UPDATE", "Sending update for user: ${request.userId}")
                 val response = RetrofitClient.api.updateProfile(request)
                 if (response.isSuccessful && response.body() != null) {
-                    // Backend returns { success: true, user: updatedUser }
-                    // But we might need a specific DTO for the response if it's not a Map. 
-                    // Let's assume it returns Map<String, Any> as per ApiService definition.
+                    android.util.Log.d("PROFILE_UPDATE", "Update successful")
                     
                     val responseBody = response.body()!!
-                    // In a real app, parse this into a UserDto. For now, we update based on request.
+                    // Extraction logic for updated user if returned in a specific field
                     
                     prefs.updateProfile(
-                        image = request.profileImageUrl,
+                        image = request.profileImageUrl ?: request.profilePicture,
                         phone = request.phoneNumber,
-                        org = request.organizationName,
-                        address = request.address
+                        org = request.organizationName ?: request.organization,
+                        address = request.address ?: request.location
                     )
                     
                     _uiState.update { it.copy(
                         isLoading = false,
                         isUpdateSuccess = true,
-                        profileImageUrl = request.profileImageUrl ?: it.profileImageUrl,
-                        organizationName = request.organizationName ?: it.organizationName,
+                        profileImageUrl = request.profileImageUrl ?: request.profilePicture ?: it.profileImageUrl,
+                        organizationName = request.organizationName ?: request.organization ?: it.organizationName,
                         phoneNumber = request.phoneNumber ?: it.phoneNumber,
-                        address = request.address ?: it.address,
+                        address = request.address ?: request.location ?: it.address,
                         firstName = request.fullName?.split(" ")?.getOrNull(0) ?: it.firstName,
                         lastName = request.fullName?.split(" ")?.drop(1)?.joinToString(" ") ?: it.lastName
                     ) }
+
+                    // Re-fetch full profile from server to ensure perfect sync
+                    fetchUserProfile(request.userId)
                 } else {
-                    _uiState.update { it.copy(isLoading = false, updateError = "Update failed: ${response.message()}") }
+                    val errorBody = response.errorBody()?.string()
+                    android.util.Log.e("PROFILE_UPDATE", "Server Rejected: $errorBody")
+                    
+                    val serverMessage = try {
+                        val json = com.google.gson.Gson().fromJson(errorBody, Map::class.java)
+                        json["message"]?.toString()
+                    } catch (e: Exception) { null }
+                    
+                    _uiState.update { it.copy(
+                        isLoading = false, 
+                        updateError = serverMessage ?: "Update failed: ${response.code()}"
+                    ) }
                 }
             } catch (e: Exception) {
+                android.util.Log.e("PROFILE_UPDATE", "Critical Failure", e)
                 val errorMessage = when (e) {
                     is SocketTimeoutException -> "Cloud server is waking up, please try again in a moment."
-                    is UnknownHostException -> "No internet connection available."
+                    is java.net.UnknownHostException -> "No internet connection available."
                     is retrofit2.HttpException -> "Server error: ${e.message()}"
                     else -> e.localizedMessage ?: "An unexpected error occurred"
                 }
@@ -285,10 +307,50 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                         organizationName = user.organizationName,
                         phoneNumber = user.phoneNumber,
                         profileImageUrl = user.profileImageUrl,
-                        address = user.phoneNumber // Assuming user model has address, if not use fallback
+                        address = user.address ?: user.location ?: "Trichy, Tamil Nadu, India"
                     ) }
+
+                    // Sync re-fetched profile to local DataStore
+                    prefs.updateProfile(
+                        image = user.profileImageUrl,
+                        phone = user.phoneNumber,
+                        org = user.organizationName,
+                        address = user.address ?: user.location
+                    )
+                    
+                    // Check for new notifications to show Heads-Up
+                    checkNewNotifications(userId, user.role)
                 }
             } catch (e: Exception) {}
+        }
+    }
+
+    private fun checkNewNotifications(userId: String, role: String) {
+        if (userId.isBlank() && role.isBlank()) return
+        
+        viewModelScope.launch {
+            try {
+                val response = RetrofitClient.api.getNotifications(userId, role)
+                if (response.isSuccessful) {
+                    val notifications = response.body() ?: emptyList()
+                    val unread = notifications.filter { !it.isRead }
+                    
+                    // Trigger heads-up only for notifications that haven't been popped up yet
+                    unread.forEach { notification ->
+                        if (!notificationTracker.hasBeenShown(notification._id)) {
+                            EcoFeedNotificationHelper.showHeadsUpNotification(
+                                getApplication(),
+                                notification.title,
+                                notification.message,
+                                notification.relatedId ?: notification.lotId
+                            )
+                            notificationTracker.markAsShown(notification._id)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AuthViewModel", "Notif Poller Error: ${e.message}")
+            }
         }
     }
 }

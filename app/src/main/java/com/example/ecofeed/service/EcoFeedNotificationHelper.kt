@@ -5,7 +5,9 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.ecofeed.MainActivity
@@ -16,6 +18,12 @@ object EcoFeedNotificationHelper {
     private const val CHANNEL_NAME = "EcoFeed Role Alerts"
 
     fun showHeadsUpNotification(context: Context, title: String, message: String, deepLink: String? = null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
         createNotificationChannel(context)
 
         val intent = Intent(context, MainActivity::class.java).apply {

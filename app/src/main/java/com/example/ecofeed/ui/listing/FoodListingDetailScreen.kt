@@ -142,7 +142,7 @@ fun FoodListingDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFF8F9FA)),
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             item { PriorityBadgeBar(donation.priorityLevel ?: "MEDIUM", donation.address ?: "Location") }
@@ -185,13 +185,13 @@ fun PriorityBadgeBar(priority: String, address: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.background)
             .padding(vertical = 12.dp, horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         BadgeChip("🟢 Priority: $priority", EcoGreen)
-        BadgeChip("📍 ${address.take(18)}", Color.Gray)
+        BadgeChip("📍 ${address.take(18)}", MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -217,7 +217,7 @@ fun HeroSection(title: String, imageUrls: List<String>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .padding(16.dp)
     ) {
         if (imageUrls.isNotEmpty()) {
@@ -240,10 +240,10 @@ fun HeroSection(title: String, imageUrls: List<String>) {
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.LightGray),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Fastfood, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.Gray)
+                Icon(Icons.Default.Fastfood, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -251,7 +251,8 @@ fun HeroSection(title: String, imageUrls: List<String>) {
             text = title,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 20.sp
+            fontSize = 20.sp,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -276,16 +277,16 @@ fun StatusChip(text: String, color: Color) {
 fun DonorInfoCard(donorName: String, donorPhone: String, onCall: () -> Unit, onChat: () -> Unit) {
     Card(
         modifier = Modifier.padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(Color.LightGray))
+                Box(modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant))
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = donorName, fontWeight = FontWeight.Bold)
+                        Text(text = donorName, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                         Icon(Icons.Default.CheckCircle, "", tint = EcoGreen, modifier = Modifier.size(16.dp).padding(start = 4.dp))
                     }
                     Text(text = if (donorPhone.isBlank()) "No phone provided" else donorPhone, color = EcoOrange, fontSize = 12.sp)
@@ -320,7 +321,7 @@ fun DonorInfoCard(donorName: String, donorPhone: String, onCall: () -> Unit, onC
 fun DetailsGrid(categoryText: String, quantityText: String, timingText: String, packagingType: String) {
     Card(
         modifier = Modifier.padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             DetailItem("Category", categoryText, Icons.Default.Category)
@@ -340,8 +341,8 @@ fun DetailItem(label: String, value: String, icon: ImageVector) {
         Icon(icon, null, tint = EcoGreen, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -370,11 +371,11 @@ fun AiMatchingCard(isEdible: Boolean, address: String) {
 fun DescriptionCard(description: String) {
     Card(
         modifier = Modifier.padding(horizontal = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("Donor Notes", fontWeight = FontWeight.Bold)
-            Text(description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp))
+            Text("Donor Notes", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -412,7 +413,7 @@ fun BottomActionBar(
     onDirectionsClick: () -> Unit,
     onViewDetailsClick: () -> Unit
 ) {
-    Surface(shadowElevation = 8.dp, color = Color.White) {
+    Surface(shadowElevation = 8.dp, color = MaterialTheme.colorScheme.surface) {
         Column(modifier = Modifier.padding(16.dp).navigationBarsPadding()) {
             Button(
                 onClick = onAcceptClick,

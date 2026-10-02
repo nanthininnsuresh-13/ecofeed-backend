@@ -1,5 +1,6 @@
 package com.example.ecofeed.ui.notifications
 
+import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,11 +18,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ecofeed.data.api.RetrofitClient
 import com.example.ecofeed.data.model.NotificationDto
+import com.example.ecofeed.service.EcoFeedNotificationHelper
+import com.example.ecofeed.service.NotificationTracker
 import com.example.ecofeed.ui.auth.AuthViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,30 +41,60 @@ private val PrimaryGreen = Color(0xFF2E7D32)
 private val LightGreenAccent = Color(0xFFE8F5E9)
 private val DarkGreenText = Color(0xFF1B5E20)
 
-class NotificationsViewModel : ViewModel() {
+class NotificationsViewModel(application: Application) : AndroidViewModel(application) {
+    private val notificationTracker = NotificationTracker(application)
     private val _uiState = MutableStateFlow(NotificationsUiState())
     val uiState: StateFlow<NotificationsUiState> = _uiState.asStateFlow()
 
-    fun fetchNotifications(userId: String) {
-        if (userId.isBlank()) return
+    fun fetchNotifications(userId: String, role: String) {
+        if (userId.isBlank() && role.isBlank()) return
+        
         _uiState.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             try {
-                val response = RetrofitClient.api.getNotifications(userId)
+                // Ensure params are clean
+                val safeUserId = userId.ifBlank { null }
+                val safeRole = role.ifBlank { null }
+                
+                val response = RetrofitClient.api.getNotifications(safeUserId ?: "", safeRole ?: "")
                 if (response.isSuccessful) {
-                    _uiState.update { it.copy(notifications = response.body() ?: emptyList(), isLoading = false) }
+                    val notifications = response.body() ?: emptyList()
+                    _uiState.update { it.copy(notifications = notifications, isLoading = false) }
+                    
+                    // Show heads-up for new, unread notifications
+                    notifications.filter { !it.isRead }.forEach { notification ->
+                        if (!notificationTracker.hasBeenShown(notification._id)) {
+                            EcoFeedNotificationHelper.showHeadsUpNotification(
+                                getApplication(),
+                                notification.title,
+                                notification.message,
+                                notification.relatedId ?: notification.lotId
+                            )
+                            notificationTracker.markAsShown(notification._id)
+                        }
+                    }
                 } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Server error: ${response.message()}") }
+                    // Fail silently or show empty state on server error
+                    _uiState.update { it.copy(isLoading = false, notifications = emptyList()) }
                 }
             } catch (e: Exception) {
-                val errorMessage = when (e) {
-                    is SocketTimeoutException -> "Cloud server is waking up, please try again in a moment."
-                    is UnknownHostException -> "No internet connection available."
-                    is HttpException -> "Server error: ${e.message()}"
-                    else -> e.localizedMessage ?: "Connectivity issue"
-                }
-                _uiState.update { it.copy(isLoading = false, error = errorMessage) }
+                // Graceful error handling for connectivity issues
+                _uiState.update { it.copy(isLoading = false, notifications = emptyList()) }
+                android.util.Log.e("NotificationsVM", "Fetch Error: ${e.message}")
             }
+        }
+    }
+
+    fun markAsRead(id: String) {
+        viewModelScope.launch {
+            try {
+                RetrofitClient.api.markNotificationAsRead(id)
+                _uiState.update { state ->
+                    state.copy(notifications = state.notifications.map { 
+                        if (it._id == id) it.copy(isRead = true) else it 
+                    })
+                }
+            } catch (e: Exception) {}
         }
     }
 }
@@ -81,9 +115,19 @@ fun NotificationsScreen(
 ) {
     val authState by authViewModel.uiState.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    var selectedNotification by remember { mutableStateOf<NotificationDto?>(null) }
 
-    LaunchedEffect(authState.userId) {
-        authState.userId?.let { viewModel.fetchNotifications(it) }
+    LaunchedEffect(authState.userId, authState.role) {
+        if (!authState.userId.isNullOrBlank()) {
+            viewModel.fetchNotifications(authState.userId!!, authState.role)
+        }
+    }
+
+    selectedNotification?.let { notification ->
+        NotificationDetailDialog(
+            notification = notification,
+            onDismiss = { selectedNotification = null }
+        )
     }
 
     Scaffold(
@@ -130,15 +174,14 @@ fun NotificationsScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    val safeNotifications = uiState.notifications.orEmpty()
                     items(
-                        items = uiState.notifications, 
+                        items = safeNotifications, 
                         key = { it._id.ifBlank { "notif_${it.hashCode()}_${System.currentTimeMillis()}" } }
                     ) { item ->
-                        NotificationCard(item) { 
-                            val targetId = item.relatedId ?: item.lotId
-                            if (!targetId.isNullOrBlank()) {
-                                onNotificationClick(targetId)
-                            }
+                        NotificationCard(item) {
+                            viewModel.markAsRead(item._id)
+                            selectedNotification = item
                         }
                     }
                 }
@@ -160,20 +203,22 @@ fun NotificationCard(item: NotificationDto, onClick: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.Top
         ) {
-            val icon = when(item.type.uppercase()) {
-                "SUCCESS" -> Icons.Default.CheckCircle
-                "WARNING" -> Icons.Default.Warning
-                "URGENT" -> Icons.Default.Bolt
+            val icon = when {
+                item.type.uppercase() == "SUCCESS" -> Icons.Default.CheckCircle
+                item.type.uppercase() == "WARNING" -> Icons.Default.Warning
+                item.type.uppercase() == "URGENT" -> Icons.Default.Bolt
+                item.title.contains("Food", ignoreCase = true) -> Icons.Default.Restaurant
+                item.title.contains("Waste", ignoreCase = true) -> Icons.Default.Recycling
                 else -> Icons.Default.Info
             }
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(PrimaryGreen.copy(alpha = 0.1f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = PrimaryGreen, modifier = Modifier.size(24.dp))
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -193,22 +238,48 @@ fun NotificationCard(item: NotificationDto, onClick: () -> Unit) {
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(PrimaryGreen)
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                     }
                 }
                 Text(
                     text = item.message ?: "You have a new update.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.DarkGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
                 Text(
                     text = item.createdAt ?: "Recently",
                     style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
         }
     }
+}
+
+@Composable
+fun NotificationDetailDialog(
+    notification: NotificationDto,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(notification.title.ifBlank { "Notification Details" }) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(notification.message.ifBlank { "No additional details available." })
+                HorizontalDivider()
+                Text("Type: ${notification.type}")
+                Text("Related ID: ${notification.relatedId ?: notification.lotId ?: "N/A"}")
+                Text("Status: ${if (notification.isRead) "Read" else "Unread"}")
+                Text("Timestamp: ${notification.createdAt}")
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }

@@ -26,5 +26,7 @@ data class CreateDonationRequest(
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
     val coordinates: List<Double> = emptyList(), // [lng, lat]
-    val imageUrls: List<String> = emptyList()
+    val imageUrls: List<String> = emptyList(),
+    val imageUrl: String? = null,
+    val foodPicture: String? = null
 )

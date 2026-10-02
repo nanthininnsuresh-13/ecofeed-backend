@@ -1,8 +1,8 @@
 package com.example.ecofeed.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -13,7 +13,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkGreenPrimary,
+    primary = PrimaryGreenLight,
     secondary = PrimaryGreenLight,
     tertiary = LightGreenAccent,
     background = BackgroundDark,
@@ -22,7 +22,8 @@ private val DarkColorScheme = darkColorScheme(
     onSecondary = Color.White,
     onTertiary = TextDark,
     onBackground = TextLight,
-    onSurface = Color.White
+    onSurface = OnSurfaceDark,
+    onSurfaceVariant = OnSurfaceDarkVariant
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -35,12 +36,13 @@ private val LightColorScheme = lightColorScheme(
     onSecondary = TextDark,
     onTertiary = TextDark,
     onBackground = TextDark,
-    onSurface = TextDark
+    onSurface = TextDark,
+    onSurfaceVariant = OnSurfaceLightVariant
 )
 
 @Composable
 fun EcoFeedTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
@@ -48,7 +50,7 @@ fun EcoFeedTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
@@ -56,6 +58,8 @@ fun EcoFeedTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = Typography,
-        content = content
+        content = {
+            Surface(color = colorScheme.background) { content() }
+        }
     )
 }

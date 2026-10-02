@@ -18,7 +18,7 @@ class MainActivity : ComponentActivity() {
         
         setContent {
             val isDarkMode by prefs.darkModeFlow.collectAsState(initial = false)
-            
+
             EcoFeedTheme(darkTheme = isDarkMode) {
                 EcoFeedNavGraph()
             }

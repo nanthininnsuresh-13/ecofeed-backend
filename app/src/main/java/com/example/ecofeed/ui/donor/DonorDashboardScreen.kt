@@ -43,6 +43,7 @@ fun DonorDashboardScreen(
     onHistoryClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
+    onFeedbackClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onAboutClick: () -> Unit = {},
     onLogout: () -> Unit = {},
@@ -55,6 +56,7 @@ fun DonorDashboardScreen(
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(authState.userId) {
+        authState.userId?.let { authViewModel.fetchUserProfile(it) }
         authState.userId?.let { donationViewModel.fetchHistory(it) }
     }
 
@@ -76,6 +78,10 @@ fun DonorDashboardScreen(
                 },
                 onNotificationsClick = { 
                     onNotificationsClick()
+                    coroutineScope.launch { drawerState.close() }
+                },
+                onFeedbackClick = {
+                    onFeedbackClick()
                     coroutineScope.launch { drawerState.close() }
                 },
                 onSettingsClick = { 
@@ -132,12 +138,13 @@ fun DonorDashboardScreen(
                                 Text(
                                     text = "Welcome, ${authState.firstName}!",
                                     style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                                 Text(
                                     text = "Thank you for helping reduce food waste.",
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -278,7 +285,10 @@ fun DonationListItem(donation: DonationItem) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -290,13 +300,13 @@ fun DonationListItem(donation: DonationItem) {
                 modifier = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFE9ECEF)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (donation.title == "Rice") Icons.Default.Fastfood else Icons.Default.Restaurant,
                     contentDescription = null,
-                    tint = Color.Gray
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(modifier = Modifier.width(16.dp))
@@ -304,12 +314,13 @@ fun DonationListItem(donation: DonationItem) {
                 Text(
                     text = donation.title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${donation.weight} • ${donation.date}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             // Status Badge
