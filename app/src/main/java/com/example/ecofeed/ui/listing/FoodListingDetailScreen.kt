@@ -146,7 +146,17 @@ fun FoodListingDetailScreen(
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             item { PriorityBadgeBar(donation.priorityLevel ?: "MEDIUM", donation.address ?: "Location") }
-            item { HeroSection(title, donation.imageUrls.orEmpty()) }
+            item { 
+                // Use imageUrls if available, otherwise fall back to imageUrl
+                val images = if (donation.imageUrls.isNotEmpty()) {
+                    donation.imageUrls
+                } else if (!donation.imageUrl.isNullOrBlank()) {
+                    listOf(donation.imageUrl)
+                } else {
+                    emptyList()
+                }
+                HeroSection(title, images) 
+            }
             item { DonorInfoCard(donorName, donation.donorPhoneNumber ?: "", callAction, chatAction) }
             item { DetailsGrid(categoryText, quantityText, timingText, donation.packagingType ?: "Not specified") }
             item { AiMatchingCard(isEdible, donation.address ?: "Location not provided") }
